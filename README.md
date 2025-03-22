@@ -1,9 +1,10 @@
 # LLMsTxt Architect
 
-llms.txt is an emerging standard for communicating website contents to LLMs. This has great potential to support RAG, [allowing LLMs to reflect on llms.txt files](https://github.com/langchain-ai/mcpdoc) to find pages needed to  answer questions or accomplish tasks. However, there is a need to clearly design and build llms.txt files that communicate the purpose of each page to LLMs. 
+llms.txt is an emerging standard for communicating website contents to LLMs. This has potential to support RAG, allowing LLMs to reflect on llms.txt files [and then fetch pages](https://github.com/langchain-ai/mcpdoc) needed to accomplish tasks. However, there is a need to clearly design and build llms.txt files that communicate the purpose of each page to LLMs. 
 
-This is a simple Python package that designs and builds [LLMs.txt](https://llmstxt.org/) files by extracting and summarizing web content using LLMs. It features 
-an easily configurable prompt, allowing the user to control how each page is summarized, and can be configured to [use many different LLMs](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) as well as custom extractors.
+This is a Python package that designs and builds [LLMs.txt](https://llmstxt.org/) files by extracting and summarizing web content using LLMs. Importantly, it gives the user control over the prompt to summarize pages, [the model provider and model](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) for summarization, the input pages to search, the search depth for recursive URL loader for each input page, and the website extractor (e.g., bs4, Markdownify, etc) for each page.
+
+![llms_txt_architecture](https://github.com/user-attachments/assets/54e12c8d-ba6e-4739-aadb-07c1c5f028f0)
 
 ## Features
 
