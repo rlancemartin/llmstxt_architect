@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llmstxt_architect"
+version = "0.1.0"
+description = "Design and build LLMs.txt knowledge structures by extracting and summarizing web content"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    {name = "lance@langchain.dev"}
+]
+dependencies = [
+    "beautifulsoup4>=4.13.3",
+    "httpx>=0.28.1",
+    "langchain>=0.3.21",
+    "langchain-community>=0.3.20",
+    "markdownify>=1.1.0",
+    "lxml>=5.3.1",
+    "langchain-anthropic>=0.3.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "pytest>=7.0.0",
+    "ruff>=0.0.275",
+]
+
+[project.scripts]
+llmstxt-architect = "llmstxt_architect.cli:main"
+
+[project.urls]
+"Homepage" = "https://github.com/user/llmstxt-architect"
+"Bug Tracker" = "https://github.com/user/llmstxt-architect/issues"
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
