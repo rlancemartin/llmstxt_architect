@@ -68,7 +68,12 @@ async def generate_llms_txt(
     )
     
     # Generate summaries
-    summaries = await summarizer.summarize_all(docs)
-    
-    # Generate final output file
-    summarizer.generate_llms_txt(summaries, str(output_file_path))
+    try:
+        summaries = await summarizer.summarize_all(docs)
+    except Exception as e:
+        print(f"Warning: Summarization process was interrupted: {str(e)}")
+        summaries = []  # Use empty list if interrupted
+    finally:
+        # Always generate the final output file, even if interrupted
+        print("Generating final llms.txt file from all available summaries...")
+        summarizer.generate_llms_txt(summaries, str(output_file_path))

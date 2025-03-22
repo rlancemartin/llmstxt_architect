@@ -145,21 +145,67 @@ class Summarizer:
         summaries = []
         
         for doc in docs:
-            summary = await self.summarize_document(doc)
-            if summary:
-                summaries.append(summary)
+            try:
+                summary = await self.summarize_document(doc)
+                if summary:
+                    summaries.append(summary)
+                    # Periodically update llms.txt after each successful summary
+                    if len(summaries) % 5 == 0:
+                        print(f"Progress: {len(summaries)} documents summarized. Updating llms.txt...")
+                        # Use a temporary path to avoid conflicts with the final output
+                        temp_output = os.path.join(os.path.dirname(self.output_dir), "llms.txt")
+                        self.generate_llms_txt(summaries, temp_output)
+            except Exception as e:
+                url = doc.metadata.get('source', 'unknown')
+                print(f"Failed to summarize document {url}: {str(e)}")
+                # Continue with the next document
+                continue
                 
         return summaries
         
     def generate_llms_txt(self, summaries: List[str], output_file: str = "llms.txt") -> None:
         """
-        Generate the final llms.txt file from summaries.
+        Generate the final llms.txt file from all summaries.
         
         Args:
-            summaries: List of summaries to include
+            summaries: List of summaries from current run
             output_file: File to save to
         """
+        # Collect all available summaries from the output directory with their URLs
+        summary_entries = []
+        
+        # Pattern to extract URL from summary
+        import re
+        url_pattern = re.compile(r'\[(.*?)\]\((https?://[^\s)]+)\)')
+        
+        # First add all summaries from files
+        for filename in os.listdir(self.output_dir):
+            if filename.endswith('.txt') and filename != os.path.basename(output_file):
+                file_path = os.path.join(self.output_dir, filename)
+                with open(file_path, 'r') as f:
+                    summary_content = f.read()
+                    
+                    # Extract URL from summary content
+                    match = url_pattern.search(summary_content)
+                    url = match.group(2) if match else filename  # Use URL or filename as fallback
+                    
+                    # Store tuple of (url, content)
+                    summary_entries.append((url, summary_content))
+        
+        # Remove duplicates while preserving order
+        unique_entries = []
+        seen_content = set()
+        for url, content in summary_entries:
+            if content not in seen_content:
+                unique_entries.append((url, content))
+                seen_content.add(content)
+                
+        # Sort by URL
+        sorted_entries = sorted(unique_entries, key=lambda x: x[0])
+        
+        # Write the sorted summaries to the output file
         with open(output_file, 'w') as f:
-            f.writelines(summaries)
+            for _, content in sorted_entries:
+                f.write(content)
             
-        print(f"Generated {output_file} with {len(summaries)} summaries.")
+        print(f"Generated {output_file} with {len(sorted_entries)} summaries sorted by URL.")
