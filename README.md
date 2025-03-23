@@ -25,7 +25,24 @@ git clone https://github.com/rlancemartin/llmstxt_architect.git
 cd llmstxt-architect
 ```
 
-You can run the package directly [with uvx](https://github.com/astral-sh/uv):
+### API Keys Setup
+
+The package uses LLMs for summarization. By default, it's configured for Anthropic's Claude models:
+
+```bash
+# Set your Anthropic API key
+export ANTHROPIC_API_KEY=your_api_key_here
+# On Windows: $env:ANTHROPIC_API_KEY="your_api_key_here"
+```
+
+To use a different [LLM provider](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) (OpenAI, Ollama, etc.):
+1. Install the corresponding package (e.g., `pip install langchain-openai`, `pip install langchain-ollama`)
+2. Set the appropriate API key (e.g., `OPENAI_API_KEY`)
+3. Specify the provider and model with the `--llm-provider` and `--llm-name` options
+
+### Running with uvx
+
+You can run the package directly [with uvx](https://github.com/astral-sh/uv) (recommended):
 
 ```bash
 # On macOS and Linux.
@@ -41,13 +58,28 @@ uvx --with-editable /path/to/llmstxt_architect llmstxt-architect \
     --project-dir langgraph_docs
 ```
 
+### Installing the Package
+
 Without uvx, you can install the package in development mode:
 
 ```bash
 # Install in development mode
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -e ".[dev]"
+pip install -e ".[dev]"  # This installs langchain-anthropic by default
+```
+
+To use a different LLM provider, install the additional packages:
+
+```bash
+# For OpenAI
+pip install langchain-openai
+
+# For Cohere
+pip install langchain-cohere
+
+# For other providers
+# See: https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html
 ```
 
 ```bash
