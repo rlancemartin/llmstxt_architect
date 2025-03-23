@@ -1,8 +1,8 @@
 # LLMsTxt Architect
 
-llms.txt is an emerging standard for communicating website contents to LLMs. This has potential to support RAG, allowing LLMs to reflect on llms.txt files [and then fetch pages](https://github.com/langchain-ai/mcpdoc) needed to accomplish tasks. However, there is a need to clearly design and build llms.txt files that communicate the purpose of each page to LLMs. 
+llms.txt is an emerging standard for communicating website contents to LLMs, often as a markdown file listing URLs within a site and their descriptions. This has potential to support context retrieval, allowing LLMs to reflect on llms.txt files [and then fetch / read pages](https://github.com/langchain-ai/mcpdoc) needed to accomplish tasks. However, this means that llms.txt files must clearly communicate the purpose of each URL so that the LLM knows which pages to fetch.
 
-This is a Python package that designs and builds [LLMs.txt](https://llmstxt.org/) files by extracting and summarizing web content using LLMs. Importantly, it gives the user control over the prompt to summarize pages, [the model provider and model](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) for summarization, the input pages to search, the search depth for recursive URL loader for each input page, and the website extractor (e.g., bs4, Markdownify, etc) for each page.
+LLMsTxt Architect is a Python package that designs and builds [LLMs.txt](https://llmstxt.org/) files by extracting and summarizing web content using LLMs. Importantly, it gives the user control over the prompt to summarize pages, [the model provider and model](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) for summarization, the input pages to search, the search depth for recursive URL loader for each input page, and the website extractor (e.g., bs4, Markdownify, etc) for each page.
 
 ![llms_txt_architecture](https://github.com/user-attachments/assets/54e12c8d-ba6e-4739-aadb-07c1c5f028f0)
 
@@ -35,10 +35,22 @@ export ANTHROPIC_API_KEY=your_api_key_here
 # On Windows: $env:ANTHROPIC_API_KEY="your_api_key_here"
 ```
 
-To use a different [LLM provider](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) (OpenAI, Ollama, etc.):
-1. Install the corresponding package (e.g., `pip install langchain-openai`, `pip install langchain-ollama`)
+To use a different [LLM provider](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html):
+
+#### Hosted LLMs (OpenAI, Anthropic, etc.):
+1. Install the corresponding package (e.g., `pip install langchain-openai`)
 2. Set the appropriate API key (e.g., `OPENAI_API_KEY`)
 3. Specify the provider and model with the `--llm-provider` and `--llm-name` options
+
+#### Local Models with Ollama:
+1. [Install Ollama](https://ollama.com/download)
+2. Pull your desired model (e.g., `ollama pull llama3.2:latest`)
+3. Install the package: `pip install langchain-ollama`
+4. Run with these options:
+   ```
+   --llm-provider ollama --llm-name llama3.2:latest
+   ```
+   No API key is required for local models!
 
 ### Running with uvx
 
@@ -86,7 +98,7 @@ pip install langchain-cohere
 # Basic usage
 llmstxt-architect --urls https://example.com
 
-# Advanced usage
+# Advanced usage with Anthropic
 llmstxt-architect \
     --urls https://example1.com https://example2.com \
     --max-depth 3 \
@@ -96,6 +108,14 @@ llmstxt-architect \
     --output-dir my_summaries \
     --output-file my_llms.txt \
     --blacklist-file blacklist.txt
+    
+# Using with local Ollama models
+llmstxt-architect \
+    --urls https://example.com \
+    --max-depth 2 \
+    --llm-name llama3.2:latest \
+    --llm-provider ollama \
+    --project-dir local_model_summaries
 ```
 
 You can also use the Python API:
@@ -109,6 +129,7 @@ urls = [
     "https://langchain-ai.github.io/langgraph/how-tos/"
 ]
 
+# With Anthropic (requires ANTHROPIC_API_KEY)
 asyncio.run(generate_llms_txt(
     urls=urls,
     max_depth=1,
@@ -118,6 +139,15 @@ asyncio.run(generate_llms_txt(
     output_dir="summaries",
     output_file="llms.txt",
     blacklist_file="blacklist.txt" # Optional: path to file with URLs to exclude
+))
+
+# With Ollama (local models, no API key needed)
+asyncio.run(generate_llms_txt(
+    urls=urls,
+    max_depth=1,
+    llm_name="llama3.2:latest",
+    llm_provider="ollama",
+    project_dir="langgraph_docs_local"
 ))
 ```
 
