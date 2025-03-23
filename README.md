@@ -62,7 +62,8 @@ llmstxt-architect \
     --llm-provider anthropic \
     --project-dir my_project \
     --output-dir my_summaries \
-    --output-file my_llms.txt
+    --output-file my_llms.txt \
+    --blacklist-file blacklist.txt
 ```
 
 You can also use the Python API:
@@ -83,7 +84,8 @@ asyncio.run(generate_llms_txt(
     llm_provider="anthropic",
     project_dir="langgraph_docs",
     output_dir="summaries",
-    output_file="llms.txt"
+    output_file="llms.txt",
+    blacklist_file="blacklist.txt" # Optional: path to file with URLs to exclude
 ))
 ```
 
@@ -106,6 +108,35 @@ llmstxt-architect \
     --llm-name claude-3-7-sonnet-latest
 ```
 
+## URL Blacklisting
+
+You can exclude specific URLs from your llms.txt file by providing a blacklist file:
+
+```bash
+# Create a blacklist file
+cat > blacklist.txt << EOF
+# Deprecated pages
+https://example.com/old-version/
+https://example.com/beta-feature
+
+# Pages with known issues
+https://example.com/broken-page
+EOF
+
+# Run with blacklist
+llmstxt-architect \
+    --urls https://example.com \
+    --blacklist-file blacklist.txt
+```
+
+The blacklist file should contain one URL per line. Empty lines and lines starting with `#` are ignored. The tool will:
+
+1. Skip summarization of blacklisted URLs during crawling
+2. Filter out blacklisted URLs from the final llms.txt file
+3. Report how many blacklisted URLs were excluded
+
+This is useful for excluding deprecated documentation, beta features, or pages with known issues.
+
 ## Fault Tolerance and Performance Enhancements
 
 The tool includes several features to handle large-scale documentation processing:
@@ -115,6 +146,7 @@ The tool includes several features to handle large-scale documentation processin
 - **URL Deduplication**: Summaries for pages that have already been processed are not regenerated
 - **Content Deduplication**: Duplicate summaries are filtered out from the final output
 - **Organized Output**: Summaries in the final llms.txt file are sorted by URL for better readability
+- **URL Blacklisting**: Support for excluding specific URLs via a blacklist file
 - **Exception Handling**: Errors during summarization of individual pages don't halt the entire process
 - **Progress Tracking**: Clear console output shows which pages have been processed and skipped
 

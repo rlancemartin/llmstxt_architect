@@ -70,6 +70,11 @@ def parse_args() -> argparse.Namespace:
         help="Prompt to use for summarization"
     )
     
+    parser.add_argument(
+        "--blacklist-file",
+        help="Path to a file containing blacklisted URLs to exclude (one per line)"
+    )
+    
     return parser.parse_args()
 
 
@@ -87,6 +92,7 @@ def main() -> None:
             output_dir=args.output_dir,
             output_file=args.output_file,
             summary_prompt=args.summary_prompt,
+            blacklist_file=args.blacklist_file,
         ))
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")

@@ -26,6 +26,7 @@ async def generate_llms_txt(
     project_dir: str = "llms_txt",
     output_dir: str = "summaries",
     output_file: str = "llms.txt",
+    blacklist_file: str = None,
 ) -> None:
     """
     Generate an llms.txt file from a list of URLs.
@@ -40,6 +41,7 @@ async def generate_llms_txt(
         project_dir: Main project directory to store all outputs
         output_dir: Directory within project_dir to save individual summaries
         output_file: File name for combined summaries (saved in project_dir)
+        blacklist_file: Path to a file containing blacklisted URLs to exclude (one per line)
     """
     # Use default extractor if none provided
     if extractor is None:
@@ -65,6 +67,7 @@ async def generate_llms_txt(
         llm_provider=llm_provider,
         summary_prompt=summary_prompt,
         output_dir=str(summaries_path),
+        blacklist_file=blacklist_file,
     )
     
     # Generate summaries

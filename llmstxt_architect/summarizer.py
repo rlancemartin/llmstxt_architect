@@ -18,6 +18,7 @@ class Summarizer:
         llm_provider: str,
         summary_prompt: str,
         output_dir: str = "summaries",
+        blacklist_file: str = None,
     ) -> None:
         """
         Initialize the summarizer.
@@ -27,12 +28,14 @@ class Summarizer:
             llm_provider: Provider of the LLM
             summary_prompt: Prompt to use for summarization
             output_dir: Directory to save summaries
+            blacklist_file: Path to a file containing blacklisted URLs (one per line)
         """
         self.llm_name = llm_name
         self.llm_provider = llm_provider
         self.summary_prompt = summary_prompt
         self.output_dir = Path(output_dir)
         self.log_file = self.output_dir / "summarized_urls.json"
+        self.blacklist_file = blacklist_file
         
         # Create output directory if it doesn't exist
         os.makedirs(self.output_dir, exist_ok=True)
@@ -42,6 +45,9 @@ class Summarizer:
         
         # Load the log of already summarized URLs
         self.summarized_urls = self._load_log()
+        
+        # Load blacklisted URLs
+        self.blacklisted_urls = self._load_blacklist()
         
     def _init_llm(self):
         """Initialize the LLM based on provider and model name."""
@@ -54,6 +60,23 @@ class Summarizer:
             
         with open(self.log_file, 'r') as f:
             return json.load(f)
+            
+    def _load_blacklist(self) -> List[str]:
+        """Load blacklisted URLs from a file."""
+        blacklisted_urls = []
+        
+        if self.blacklist_file and os.path.exists(self.blacklist_file):
+            with open(self.blacklist_file, 'r') as f:
+                # Read lines and strip whitespace, filter out empty lines and comments
+                urls = [line.strip() for line in f.readlines()]
+                urls = [url for url in urls if url and not url.startswith('#')]
+                
+                # Normalize URLs by removing trailing slashes
+                blacklisted_urls = [url.rstrip('/') for url in urls]
+                
+            print(f"Loaded {len(blacklisted_urls)} blacklisted URLs from {self.blacklist_file}")
+        
+        return blacklisted_urls
             
     def _save_log(self) -> None:
         """Save the log of summarized URLs."""
@@ -81,6 +104,14 @@ class Summarizer:
             Summary of the document
         """
         url = doc.metadata.get('source', '')
+        
+        # Normalize URL for comparison
+        normalized_url = url.rstrip('/')
+        
+        # Check if URL is blacklisted
+        if normalized_url in self.blacklisted_urls:
+            print(f"Skipping blacklisted URL: {url}")
+            return None
         
         # Check if already summarized
         if url in self.summarized_urls:
@@ -198,6 +229,10 @@ class Summarizer:
         # Group entries by normalized URL
         url_to_entries = {}
         for url, content in summary_entries:
+            # Skip blacklisted URLs
+            if url in self.blacklisted_urls:
+                continue
+                
             if url not in url_to_entries:
                 url_to_entries[url] = []
             url_to_entries[url].append(content)
@@ -232,7 +267,12 @@ class Summarizer:
         total_files = sum(1 for f in os.listdir(self.output_dir) 
                           if f.endswith('.txt') and f != os.path.basename(output_file))
         duplicates_removed = total_files - len(sorted_entries)
+        
+        # Count blacklisted URLs that were in the summary files
+        blacklisted_count = sum(1 for url, _ in summary_entries if url in self.blacklisted_urls)
             
         print(f"Generated {output_file} with {len(sorted_entries)} unique summaries sorted by URL.")
         if duplicates_removed > 0:
             print(f"Removed {duplicates_removed} duplicate entries (same URL with/without trailing slash or identical content).")
+        if blacklisted_count > 0:
+            print(f"Excluded {blacklisted_count} blacklisted URL entries.")
