@@ -90,7 +90,7 @@ def main() -> None:
     """Main entry point for the CLI."""
     args = parse_args()
     
-    # Map extractor choice to function
+    # Map extractor choice to function (these are coroutines, will be awaited internally)
     extractor_map = {
         "default": default_extractor,
         "bs4": bs4_extractor

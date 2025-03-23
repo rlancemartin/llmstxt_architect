@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llmstxt_architect"
-version = "0.1.0"
+version = "0.4.0"
 description = "Design and build LLMs.txt knowledge structures by extracting and summarizing web content"
 readme = "README.md"
 requires-python = ">=3.10"

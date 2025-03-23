@@ -3,10 +3,11 @@ Content extraction utilities for web pages.
 """
 
 import re
+
 from bs4 import BeautifulSoup
 from markdownify import markdownify
 
-async def bs4_extractor(html: str) -> str:
+def bs4_extractor(html: str) -> str:
     """
     Extract content from HTML using BeautifulSoup.
     
@@ -30,7 +31,7 @@ async def bs4_extractor(html: str) -> str:
     return content
 
 
-async def default_extractor(html: str) -> str:
+def default_extractor(html: str) -> str:
     """
     Extract content from HTML and convert to markdown.
     
@@ -40,4 +41,5 @@ async def default_extractor(html: str) -> str:
     Returns:
         Markdown converted content
     """
-    return markdownify(html)
+    result = markdownify(html)
+    return str(result)

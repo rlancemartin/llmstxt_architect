@@ -32,7 +32,7 @@ However, you can easily switch to other providers  [listed here](https://python.
 ### UVX 
 
 Use uvx to fetch and run the package directly with user-defined parameters:
-```
+```shell
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
 $ uvx --from llmstxt-architect llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name claude-3-7-sonnet-latest --llm-provider anthropic --project-dir test
 ```
@@ -152,10 +152,10 @@ llmstxt-architect --urls https://example.com --extractor bs4
 llmstxt-architect --urls https://example.com --extractor default
 ```
 
-For advanced use cases, you can override the default extractor in the Python API with your own custom extractor functione.g.,
+For advanced use cases, you can override the default extractor in the Python API with your own custom extractor function, e.g.,
 ```python 
 
-async def my_extractor(html: str) -> str:
+def my_extractor(html: str) -> str:
     """
     Extract content from HTML using xxx.
     
