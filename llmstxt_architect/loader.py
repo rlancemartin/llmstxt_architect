@@ -2,7 +2,7 @@
 URL loading and document processing.
 """
 
-from typing import Callable, List, Optional
+from typing import Callable, List
 
 from langchain_community.document_loaders import RecursiveUrlLoader
 from langchain.schema import Document

@@ -3,7 +3,7 @@ Core functionality for generating LLMs.txt files.
 """
 
 import asyncio
-from typing import Callable, List, Optional
+from typing import Callable, List
 
 from llmstxt_architect.extractor import bs4_extractor, default_extractor
 from llmstxt_architect.loader import load_urls
@@ -45,7 +45,7 @@ async def generate_llms_txt(
     """
     # Use default extractor if none provided
     if extractor is None:
-        extractor = bs4_extractor
+        extractor = default_extractor
     
     import os
     from pathlib import Path

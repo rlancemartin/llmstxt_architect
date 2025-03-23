@@ -7,6 +7,7 @@ import asyncio
 import sys
 from typing import List, Optional
 
+from llmstxt_architect.extractor import bs4_extractor, default_extractor
 from llmstxt_architect.main import generate_llms_txt
 
 
@@ -75,12 +76,26 @@ def parse_args() -> argparse.Namespace:
         help="Path to a file containing blacklisted URLs to exclude (one per line)"
     )
     
+    parser.add_argument(
+        "--extractor",
+        default="default",
+        choices=["default", "bs4"],
+        help="Content extractor to use (default: markdownify, bs4: BeautifulSoup)"
+    )
+    
     return parser.parse_args()
 
 
 def main() -> None:
     """Main entry point for the CLI."""
     args = parse_args()
+    
+    # Map extractor choice to function
+    extractor_map = {
+        "default": default_extractor,
+        "bs4": bs4_extractor
+    }
+    extractor_func = extractor_map[args.extractor]
     
     try:
         asyncio.run(generate_llms_txt(
@@ -93,6 +108,7 @@ def main() -> None:
             output_file=args.output_file,
             summary_prompt=args.summary_prompt,
             blacklist_file=args.blacklist_file,
+            extractor=extractor_func,
         ))
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")
