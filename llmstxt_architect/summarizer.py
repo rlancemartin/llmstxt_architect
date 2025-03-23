@@ -189,23 +189,50 @@ class Summarizer:
                     match = url_pattern.search(summary_content)
                     url = match.group(2) if match else filename  # Use URL or filename as fallback
                     
-                    # Store tuple of (url, content)
-                    summary_entries.append((url, summary_content))
+                    # Normalize URL by removing trailing slash if present
+                    normalized_url = url.rstrip('/')
+                    
+                    # Store tuple of (normalized_url, content)
+                    summary_entries.append((normalized_url, summary_content))
         
-        # Remove duplicates while preserving order
-        unique_entries = []
-        seen_content = set()
+        # Group entries by normalized URL
+        url_to_entries = {}
         for url, content in summary_entries:
+            if url not in url_to_entries:
+                url_to_entries[url] = []
+            url_to_entries[url].append(content)
+        
+        # For each URL, select the best/most recent content
+        # (We'll use the longest summary as a heuristic for "best")
+        unique_entries = []
+        for url, contents in url_to_entries.items():
+            # Sort by length in descending order (longest first)
+            contents.sort(key=len, reverse=True)
+            # Take the first (longest) entry
+            unique_entries.append((url, contents[0]))
+        
+        # Additional deduplication based on content
+        final_entries = []
+        seen_content = set()
+        for url, content in unique_entries:
+            # Skip exact duplicate content
             if content not in seen_content:
-                unique_entries.append((url, content))
+                final_entries.append((url, content))
                 seen_content.add(content)
                 
         # Sort by URL
-        sorted_entries = sorted(unique_entries, key=lambda x: x[0])
+        sorted_entries = sorted(final_entries, key=lambda x: x[0])
         
         # Write the sorted summaries to the output file
         with open(output_file, 'w') as f:
             for _, content in sorted_entries:
                 f.write(content)
+        
+        # Get counts for logging
+        total_files = sum(1 for f in os.listdir(self.output_dir) 
+                          if f.endswith('.txt') and f != os.path.basename(output_file))
+        duplicates_removed = total_files - len(sorted_entries)
             
-        print(f"Generated {output_file} with {len(sorted_entries)} summaries sorted by URL.")
+        print(f"Generated {output_file} with {len(sorted_entries)} unique summaries sorted by URL.")
+        if duplicates_removed > 0:
+            print(f"Removed {duplicates_removed} duplicate entries (same URL with/without trailing slash or identical content).")
