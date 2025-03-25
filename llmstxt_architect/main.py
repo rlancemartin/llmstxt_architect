@@ -3,10 +3,12 @@ Core functionality for generating LLMs.txt files.
 """
 
 import asyncio
-from typing import Callable, List
+import time
+from typing import Callable, Dict, List, Any
 
 from llmstxt_architect.extractor import bs4_extractor, default_extractor
 from llmstxt_architect.loader import load_urls
+from llmstxt_architect.styling import status_message, generate_summary_report
 from llmstxt_architect.summarizer import Summarizer
 
 
@@ -43,6 +45,18 @@ async def generate_llms_txt(
         output_file: File name for combined summaries (saved in project_dir)
         blacklist_file: Path to a file containing blacklisted URLs to exclude (one per line)
     """
+    # Start timing
+    start_time = time.time()
+    
+    # Stats to track
+    stats: Dict[str, Any] = {
+        "urls_processed": 0,
+        "summaries_generated": 0,
+        "failed_urls": [],
+        "total_time": 0,
+        "output_path": ""
+    }
+    
     # Use default extractor if none provided
     if extractor is None:
         extractor = default_extractor
@@ -57,11 +71,17 @@ async def generate_llms_txt(
     # Construct paths relative to project directory
     summaries_path = project_path / output_dir
     output_file_path = project_path / output_file
-        
+    
+    # Update stats with output path
+    stats["output_path"] = str(output_file_path)
+    
     # Load all documents
+    print(status_message("Loading and processing URLs...", "processing"))
     docs = await load_urls(urls, max_depth, extractor)
+    stats["urls_processed"] = len(docs)
     
     # Initialize summarizer
+    print(status_message(f"Initializing summarizer with {llm_name} via {llm_provider}...", "info"))
     summarizer = Summarizer(
         llm_name=llm_name,
         llm_provider=llm_provider,
@@ -72,11 +92,21 @@ async def generate_llms_txt(
     
     # Generate summaries
     try:
+        print(status_message("Generating summaries...", "processing"))
         summaries = await summarizer.summarize_all(docs)
+        stats["summaries_generated"] = len(summaries)
     except Exception as e:
-        print(f"Warning: Summarization process was interrupted: {str(e)}")
+        print(status_message(f"Summarization process was interrupted: {str(e)}", "error"))
         summaries = []  # Use empty list if interrupted
+        stats["failed_urls"] = [doc.url for doc in docs if doc.url not in [s.url for s in summaries]]
     finally:
         # Always generate the final output file, even if interrupted
-        print("Generating final llms.txt file from all available summaries...")
+        print(status_message("Generating final llms.txt file from all available summaries...", "processing"))
         summarizer.generate_llms_txt(summaries, str(output_file_path))
+        
+        # Calculate total time
+        stats["total_time"] = time.time() - start_time
+        
+        # Display final report
+        print("\n" + status_message("Process completed!", "success"))
+        print(generate_summary_report(stats))

@@ -9,6 +9,7 @@ from typing import List, Optional
 
 from llmstxt_architect.extractor import bs4_extractor, default_extractor
 from llmstxt_architect.main import generate_llms_txt
+from llmstxt_architect.styling import color_text, draw_box
 
 
 def parse_args() -> argparse.Namespace:
@@ -83,12 +84,22 @@ def parse_args() -> argparse.Namespace:
         help="Content extractor to use (default: markdownify, bs4: BeautifulSoup)"
     )
     
+    
     return parser.parse_args()
+
+
+def show_splash() -> None:
+    """Display the splash screen."""
+    print(color_text(draw_box("LLMsTxt Architect - Generate LLMs.txt from web content", "green", 2), "green"))
+    print()
 
 
 def main() -> None:
     """Main entry point for the CLI."""
     args = parse_args()
+    
+    # Show splash screen
+    show_splash()
     
     # Map extractor choice to function (these are coroutines, will be awaited internally)
     extractor_map = {
@@ -111,10 +122,10 @@ def main() -> None:
             extractor=extractor_func,
         ))
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
+        print(color_text("\nOperation cancelled by user.", "yellow"))
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(color_text(f"Error: {str(e)}", "red"))
         sys.exit(1)
     
 
