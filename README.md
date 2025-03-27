@@ -88,7 +88,9 @@ The full list of configurations is available in the [CLI help](https://github.co
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `--urls` | List[str] | Required | List of URLs to process |
+| `--urls` | List[str] | (Required if not using `--existing-llms-file`) | List of URLs to process |
+| `--existing-llms-file` | str | (Required if not using `--urls`) | Path to an existing llms.txt file to extract URLs from and update |
+| `--update-descriptions-only` | flag | False | Update only descriptions in existing llms.txt while preserving structure and URL order |
 | `--max-depth` | int | 5 | Maximum recursion depth for URL crawling |
 | `--llm-name` | str | "claude-3-sonnet-20240229" | LLM model name |
 | `--llm-provider` | str | "anthropic" | LLM provider |
@@ -246,6 +248,37 @@ The tool includes several features to handle large-scale documentation processin
 - **Progress Tracking**: Clear console output shows which pages have been processed and skipped
 
 These enhancements make the tool suitable for processing large documentation websites with hundreds of pages, even when using rate-limited API-based LLM providers.
+
+## Updating Existing llms.txt Files
+
+LLMsTxt Architect can update descriptions in existing llms.txt files while preserving their structure and ordering:
+
+### Using an Existing File as URL Source
+
+```bash
+llmstxt-architect --existing-llms-file path/to/llms.txt
+```
+
+This extracts URLs from the existing file and generates a completely new llms.txt with freshly generated descriptions. The original file's structure (headers, ordering, etc.) is not preserved.
+
+### Preserving File Structure While Updating Descriptions
+
+```bash
+llmstxt-architect --existing-llms-file path/to/llms.txt --update-descriptions-only
+```
+
+This mode:
+- Preserves all structural elements (headers, subheaders, newlines)
+- Maintains the exact ordering of URLs
+- Preserves titles from the original file
+- Only updates the descriptions for each URL
+
+This is particularly useful when:
+- The existing file has a carefully curated structure you want to maintain
+- You want to improve descriptions without changing the organization
+- You need to update only descriptions for a specific set of documentation
+
+For maximum control over the output structure, use the `--update-descriptions-only` flag.
 
 ## License
 

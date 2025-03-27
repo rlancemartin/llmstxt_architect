@@ -2,7 +2,13 @@
 URL loading and document processing.
 """
 
-from typing import Callable, List
+import asyncio
+import httpx
+import re
+import time
+from collections import OrderedDict
+from typing import Callable, Dict, List, Optional, Tuple, Set
+from urllib.parse import urlparse
 
 from langchain_community.document_loaders import RecursiveUrlLoader
 from langchain.schema import Document
@@ -12,37 +18,314 @@ async def load_urls(
     urls: List[str],
     max_depth: int = 5,
     extractor: Callable[[str], str] = None,
+    existing_llms_file: Optional[str] = None,
 ) -> List[Document]:
     """
-    Load documents from URLs recursively.
+    Load documents from URLs.
     
     Args:
         urls: List of URLs to load
-        max_depth: Maximum recursion depth
+        max_depth: Maximum recursion depth (only used for recursive loading)
         extractor: Function to extract content from HTML
+        existing_llms_file: Path to an existing llms.txt file to extract URLs from
         
     Returns:
         List of loaded documents
     """
-    docs = []
+    # If an existing llms.txt file is provided, extract URLs from it
+    if existing_llms_file:
+        urls_from_file = extract_urls_from_llms_file(existing_llms_file)
+        if urls_from_file:
+            urls = urls_from_file
+            print(f"Using {len(urls)} URLs from existing file")
     
-    for url in urls:
-        loader = RecursiveUrlLoader(
-            url,
-            max_depth=max_depth,
-            extractor=extractor,
-        )
+    docs = []
+    processed_count = 0
+    total_urls = len(urls)
+    
+    # Use direct URL loading for existing llms.txt files (more efficient)
+    if existing_llms_file:
+        docs = await load_urls_directly(urls, extractor)
+    else:
+        # Use recursive loader for standard URL crawling
+        for url in urls:
+            try:
+                loader = RecursiveUrlLoader(
+                    url,
+                    max_depth=max_depth,
+                    extractor=extractor,
+                )
 
-        # Load documents using lazy loading (memory efficient)
-        docs_lazy = loader.lazy_load()
+                # Load documents using lazy loading (memory efficient)
+                docs_lazy = loader.lazy_load()
 
-        # Load documents and track URLs
-        for d in docs_lazy:
-            docs.append(d)
+                # Load documents and track URLs
+                url_docs = []
+                for d in docs_lazy:
+                    url_docs.append(d)
+                    
+                docs.extend(url_docs)
+                
+                # Update progress
+                processed_count += 1
+                if processed_count % 10 == 0 or processed_count == total_urls:
+                    print(f"Progress: {processed_count}/{total_urls} URLs processed")
+                    
+            except Exception as e:
+                print(f"Error loading URL {url}: {str(e)}")
+                continue
 
-    print(f"Loaded {len(docs)} documents from URLs.")
-    print("\nLoaded URLs:")
-    for i, doc in enumerate(docs):
-        print(f"{i+1}. {doc.metadata.get('source', 'Unknown URL')}")
-        
+    print(f"\nLoaded {len(docs)} documents.")
+    
     return docs
+
+
+async def load_urls_directly(urls: List[str], extractor: Callable[[str], str] = None) -> List[Document]:
+    """
+    Load URLs directly without recursion. More efficient for existing llms.txt files.
+    
+    Args:
+        urls: List of URLs to load
+        extractor: Function to extract content from HTML
+        
+    Returns:
+        List of Document objects
+    """
+    docs = []
+    errors = []
+    successful = 0
+    duplicates_avoided = 0
+    
+    # Track URLs we've already processed to avoid duplicates
+    # Use normalized URLs for comparison
+    processed_urls = set()
+    
+    # Configure client with reasonable defaults
+    timeout = httpx.Timeout(30.0)  # 30 seconds
+    limits = httpx.Limits(max_connections=10)  # Limit concurrent connections
+    
+    # Process URLs in batches to avoid overwhelming the system
+    batch_size = 10
+    
+    # Deduplicate URLs before processing
+    unique_batches = []
+    for i in range(0, len(urls), batch_size):
+        batch = urls[i:i+batch_size]
+        unique_batch = []
+        
+        for url in batch:
+            normalized_url = normalize_url(url)
+            if normalized_url not in processed_urls:
+                unique_batch.append(url)
+                processed_urls.add(normalized_url)
+            else:
+                duplicates_avoided += 1
+                
+        if unique_batch:
+            unique_batches.append(unique_batch)
+    
+    # Report deduplication results
+    if duplicates_avoided > 0:
+        print(f"Avoiding {duplicates_avoided} duplicate URLs during loading")
+    
+    print(f"Loading {len(processed_urls)} unique URLs (batch size: {batch_size})...")
+    
+    # Process each batch of unique URLs
+    for batch in unique_batches:
+        batch_docs = []
+        
+        # Create tasks to fetch URLs concurrently
+        async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
+            tasks = []
+            for url in batch:
+                tasks.append(fetch_url(client, url, extractor))
+            
+            # Process the batch concurrently
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Process results
+            for result, url in zip(results, batch):
+                if isinstance(result, Exception):
+                    errors.append((url, str(result)))
+                    continue
+                
+                if result:
+                    batch_docs.append(result)
+                    successful += 1
+        
+        # Add batch results to main list
+        docs.extend(batch_docs)
+        
+        # Report progress
+        processed_so_far = min(successful + len(errors), len(processed_urls))
+        print(f"Progress: {processed_so_far}/{len(processed_urls)} unique URLs processed")
+    
+    # Report final results
+    print(f"Successfully loaded {successful} URLs")
+    if errors:
+        print(f"Failed to load {len(errors)} URLs")
+    if duplicates_avoided > 0:
+        print(f"Avoided processing {duplicates_avoided} duplicate URLs (token saving)")
+    
+    return docs
+
+
+async def fetch_url(client: httpx.AsyncClient, url: str, extractor: Callable[[str], str]) -> Optional[Document]:
+    """
+    Fetch a single URL and convert it to a Document.
+    
+    Args:
+        client: HTTPX client to use
+        url: URL to fetch
+        extractor: Function to extract content from HTML
+        
+    Returns:
+        Document object or None if failed
+    """
+    try:
+        # Add a small delay to avoid hammering servers
+        await asyncio.sleep(0.1)
+        
+        # Fetch URL
+        response = await client.get(url, follow_redirects=True)
+        response.raise_for_status()
+        
+        # Extract page title
+        title = extract_title(response.text) or url.split('/')[-1]
+        
+        # Extract content
+        if extractor:
+            content = extractor(response.text)
+        else:
+            content = response.text
+        
+        # Create document
+        return Document(
+            page_content=content,
+            metadata={
+                "source": url,
+                "title": title
+            }
+        )
+    except Exception as e:
+        print(f"Error fetching {url}: {str(e)}")
+        return None
+
+
+def extract_title(html_content: str) -> Optional[str]:
+    """Extract title from HTML content."""
+    title_match = re.search(r'<title>(.*?)</title>', html_content, re.IGNORECASE | re.DOTALL)
+    if title_match:
+        return title_match.group(1).strip()
+    return None
+
+
+def extract_urls_from_llms_file(file_path: str) -> List[str]:
+    """
+    Extract URLs from an existing llms.txt file, removing duplicates while preserving order.
+    
+    Args:
+        file_path: Path to the llms.txt file
+        
+    Returns:
+        List of URLs found in the file, deduplicated but order preserved
+    """
+    # Use OrderedDict to preserve order while deduplicating
+    unique_urls = OrderedDict()
+    url_pattern = re.compile(r'\[(.*?)\]\((https?://[^\s)]+)\)')
+    
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+            matches = url_pattern.findall(content)
+            
+            # Process URLs, normalizing and deduplicating
+            for match in matches:
+                url = match[1]
+                normalized_url = normalize_url(url)
+                if normalized_url not in unique_urls:
+                    unique_urls[normalized_url] = url
+            
+            deduplicated_urls = list(unique_urls.values())
+            
+        # Report results
+        total_urls = len(matches)
+        unique_count = len(deduplicated_urls)
+        print(f"Extracted {total_urls} URLs from existing llms.txt file: {file_path}")
+        if total_urls > unique_count:
+            print(f"Removed {total_urls - unique_count} duplicate URLs, {unique_count} unique URLs remaining")
+            
+    except Exception as e:
+        print(f"Error reading existing llms.txt file: {str(e)}")
+        deduplicated_urls = []
+        
+    return deduplicated_urls
+
+
+def normalize_url(url: str) -> str:
+    """
+    Normalize URL for comparison and deduplication.
+    
+    Args:
+        url: URL to normalize
+        
+    Returns:
+        Normalized URL
+    """
+    # Remove trailing slash if present
+    normalized = url.rstrip('/')
+    
+    # Convert to lowercase for better matching
+    normalized = normalized.lower()
+    
+    # Further normalization can be added here (e.g., removing www, query params, etc.)
+    
+    return normalized
+
+
+def parse_existing_llms_file(file_path: str) -> Tuple[Dict[str, str], List[str]]:
+    """
+    Parse an existing llms.txt file to extract URLs, their descriptions,
+    and overall file structure (headers, newlines, etc.).
+    
+    Args:
+        file_path: Path to the llms.txt file
+        
+    Returns:
+        Tuple containing:
+            - Dictionary mapping URLs to their descriptions
+            - List of file content lines to preserve structure
+    """
+    url_to_description = {}
+    file_structure = []
+    url_pattern = re.compile(r'\[(.*?)\]\((https?://[^\s)]+)\)')
+    
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+            
+            for line in lines:
+                file_structure.append(line)
+                line = line.strip()
+                
+                # Skip empty lines
+                if not line:
+                    continue
+                    
+                # Check if line contains a URL
+                match = url_pattern.search(line)
+                if match:
+                    title = match.group(1)
+                    url = match.group(2)
+                    
+                    # Extract description (everything after the URL and colon)
+                    description_start = line.find(':', match.end())
+                    if description_start != -1:
+                        description = line[description_start + 1:].strip()
+                        url_to_description[url] = description
+        
+        print(f"Parsed {len(url_to_description)} URL descriptions from existing llms.txt file: {file_path}")
+    except Exception as e:
+        print(f"Error parsing existing llms.txt file: {str(e)}")
+        
+    return url_to_description, file_structure

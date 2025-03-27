@@ -18,11 +18,24 @@ def parse_args() -> argparse.Namespace:
         description="Generate LLMs.txt from web content using LLMs for summarization"
     )
     
-    parser.add_argument(
+    # Create mutually exclusive group for URL input sources
+    url_group = parser.add_mutually_exclusive_group(required=True)
+    
+    url_group.add_argument(
         "--urls", 
         nargs="+", 
-        required=True,
         help="List of URLs to process"
+    )
+    
+    url_group.add_argument(
+        "--existing-llms-file",
+        help="Path to an existing llms.txt file to extract URLs from and update"
+    )
+    
+    parser.add_argument(
+        "--update-descriptions-only",
+        action="store_true",
+        help="Update only descriptions in existing llms.txt while preserving structure and URL order"
     )
     
     parser.add_argument(
@@ -84,7 +97,6 @@ def parse_args() -> argparse.Namespace:
         help="Content extractor to use (default: markdownify, bs4: BeautifulSoup)"
     )
     
-    
     return parser.parse_args()
 
 
@@ -108,9 +120,17 @@ def main() -> None:
     }
     extractor_func = extractor_map[args.extractor]
     
+    # Handle update-descriptions-only flag (requires existing-llms-file)
+    if args.update_descriptions_only and not args.existing_llms_file:
+        print(color_text("Error: --update-descriptions-only requires --existing-llms-file", "red"))
+        sys.exit(1)
+        
+    # If using existing llms file but no URLs specified, will extract from file
+    urls = args.urls or []
+    
     try:
         asyncio.run(generate_llms_txt(
-            urls=args.urls,
+            urls=urls,
             max_depth=args.max_depth,
             llm_name=args.llm_name,
             llm_provider=args.llm_provider,
@@ -120,6 +140,8 @@ def main() -> None:
             summary_prompt=args.summary_prompt,
             blacklist_file=args.blacklist_file,
             extractor=extractor_func,
+            existing_llms_file=args.existing_llms_file,
+            update_descriptions_only=args.update_descriptions_only,
         ))
     except KeyboardInterrupt:
         print(color_text("\nOperation cancelled by user.", "yellow"))
