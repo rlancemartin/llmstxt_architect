@@ -54,9 +54,14 @@ class Summarizer:
         # Load blacklisted URLs
         self.blacklisted_urls = self._load_blacklist()
         
+        # Parse existing llms.txt file if provided - handled in __post_init__
+        self.existing_llms_file = existing_llms_file
+        
+    async def __post_init__(self):
+        """Async initialization that runs after __init__."""
         # Parse existing llms.txt file if provided
-        if existing_llms_file:
-            self._parse_existing_file_titles()
+        if self.existing_llms_file:
+            await self._parse_existing_file_titles()
         
     def _init_llm(self):
         """Initialize the LLM based on provider and model name."""
@@ -102,22 +107,38 @@ class Summarizer:
             filename += '.txt'
         return filename
     
-    def _parse_existing_file_titles(self) -> None:
+    async def _parse_existing_file_titles(self) -> None:
         """
         Parse the existing llms.txt file to extract URL to title mapping.
         This helps preserve titles when updating only descriptions.
+        Can handle both local files and remote URLs.
         """
         url_pattern = re.compile(r'\[(.*?)\]\((https?://[^\s)]+)\)')
         
         try:
-            with open(self.existing_llms_file, 'r') as f:
-                content = f.read()
-                matches = url_pattern.findall(content)
+            # Check if the input is a URL or a local file path
+            if self.existing_llms_file.startswith(('http://', 'https://')):
+                # Handle remote URL
+                from llmstxt_architect.loader import fetch_llms_txt_from_url
+                try:
+                    content = await fetch_llms_txt_from_url(self.existing_llms_file)
+                    source_desc = f"remote URL: {self.existing_llms_file}"
+                except Exception as e:
+                    print(f"Error fetching titles from remote llms.txt file: {str(e)}")
+                    return
+            else:
+                # Handle local file
+                with open(self.existing_llms_file, 'r') as f:
+                    content = f.read()
+                source_desc = f"local file: {self.existing_llms_file}"
+            
+            # Extract titles from content
+            matches = url_pattern.findall(content)
+            
+            for title, url in matches:
+                self.url_titles[url] = title
                 
-                for title, url in matches:
-                    self.url_titles[url] = title
-                    
-            print(f"Extracted {len(self.url_titles)} URL titles from existing llms.txt file")
+            print(f"Extracted {len(self.url_titles)} URL titles from llms.txt ({source_desc})")
         except Exception as e:
             print(f"Error parsing URL titles from existing file: {str(e)}")
             

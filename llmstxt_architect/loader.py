@@ -27,17 +27,16 @@ async def load_urls(
         urls: List of URLs to load
         max_depth: Maximum recursion depth (only used for recursive loading)
         extractor: Function to extract content from HTML
-        existing_llms_file: Path to an existing llms.txt file to extract URLs from
+        existing_llms_file: Path to an existing llms.txt file to extract URLs from (can be local path or URL)
         
     Returns:
         List of loaded documents
     """
     # If an existing llms.txt file is provided, extract URLs from it
     if existing_llms_file:
-        urls_from_file = extract_urls_from_llms_file(existing_llms_file)
+        urls_from_file = await extract_urls_from_llms_file(existing_llms_file)
         if urls_from_file:
             urls = urls_from_file
-            print(f"Using {len(urls)} URLs from existing file")
     
     docs = []
     processed_count = 0
@@ -220,12 +219,13 @@ def extract_title(html_content: str) -> Optional[str]:
     return None
 
 
-def extract_urls_from_llms_file(file_path: str) -> List[str]:
+async def extract_urls_from_llms_file(file_path: str) -> List[str]:
     """
     Extract URLs from an existing llms.txt file, removing duplicates while preserving order.
+    Can handle both local file paths and URLs.
     
     Args:
-        file_path: Path to the llms.txt file
+        file_path: Path to the llms.txt file or URL
         
     Returns:
         List of URLs found in the file, deduplicated but order preserved
@@ -235,31 +235,62 @@ def extract_urls_from_llms_file(file_path: str) -> List[str]:
     url_pattern = re.compile(r'\[(.*?)\]\((https?://[^\s)]+)\)')
     
     try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-            matches = url_pattern.findall(content)
-            
-            # Process URLs, normalizing and deduplicating
-            for match in matches:
-                url = match[1]
-                normalized_url = normalize_url(url)
-                if normalized_url not in unique_urls:
-                    unique_urls[normalized_url] = url
-            
-            deduplicated_urls = list(unique_urls.values())
-            
+        # Check if the input is a URL or a local file path
+        if file_path.startswith(('http://', 'https://')):
+            # Handle URL
+            content = await fetch_llms_txt_from_url(file_path)
+            source_desc = f"remote URL: {file_path}"
+        else:
+            # Handle local file
+            with open(file_path, 'r') as f:
+                content = f.read()
+            source_desc = f"local file: {file_path}"
+        
+        # Parse URLs from content
+        matches = url_pattern.findall(content)
+        
+        # Process URLs, normalizing and deduplicating
+        for match in matches:
+            url = match[1]
+            normalized_url = normalize_url(url)
+            if normalized_url not in unique_urls:
+                unique_urls[normalized_url] = url
+        
+        deduplicated_urls = list(unique_urls.values())
+        
         # Report results
         total_urls = len(matches)
         unique_count = len(deduplicated_urls)
-        print(f"Extracted {total_urls} URLs from existing llms.txt file: {file_path}")
+        print(f"Extracted {total_urls} URLs from existing llms.txt ({source_desc})")
         if total_urls > unique_count:
             print(f"Removed {total_urls - unique_count} duplicate URLs, {unique_count} unique URLs remaining")
             
     except Exception as e:
-        print(f"Error reading existing llms.txt file: {str(e)}")
+        print(f"Error reading existing llms.txt: {str(e)}")
         deduplicated_urls = []
         
     return deduplicated_urls
+
+
+async def fetch_llms_txt_from_url(url: str) -> str:
+    """
+    Fetch llms.txt content from a URL.
+    
+    Args:
+        url: URL to fetch llms.txt from
+        
+    Returns:
+        Content of the llms.txt file as string
+    """
+    try:
+        print(f"Fetching llms.txt from remote URL: {url}")
+        timeout = httpx.Timeout(30.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.get(url, follow_redirects=True)
+            response.raise_for_status()
+            return response.text
+    except Exception as e:
+        raise Exception(f"Failed to fetch llms.txt from URL {url}: {str(e)}")
 
 
 def normalize_url(url: str) -> str:
@@ -296,36 +327,53 @@ def parse_existing_llms_file(file_path: str) -> Tuple[Dict[str, str], List[str]]
             - Dictionary mapping URLs to their descriptions
             - List of file content lines to preserve structure
     """
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+        return parse_existing_llms_file_content(lines, f"local file: {file_path}")
+    except Exception as e:
+        print(f"Error parsing existing llms.txt file: {str(e)}")
+        return {}, []
+
+
+def parse_existing_llms_file_content(lines: List[str], source_desc: str = "content") -> Tuple[Dict[str, str], List[str]]:
+    """
+    Parse content of an llms.txt file to extract URLs, their descriptions,
+    and overall file structure (headers, newlines, etc.).
+    
+    Args:
+        lines: List of lines from the llms.txt content
+        source_desc: Description of the source for reporting
+        
+    Returns:
+        Tuple containing:
+            - Dictionary mapping URLs to their descriptions
+            - List of file content lines to preserve structure
+    """
     url_to_description = {}
     file_structure = []
     url_pattern = re.compile(r'\[(.*?)\]\((https?://[^\s)]+)\)')
     
-    try:
-        with open(file_path, 'r') as f:
-            lines = f.readlines()
+    for line in lines:
+        file_structure.append(line)
+        line_stripped = line.strip()
+        
+        # Skip empty lines
+        if not line_stripped:
+            continue
             
-            for line in lines:
-                file_structure.append(line)
-                line = line.strip()
-                
-                # Skip empty lines
-                if not line:
-                    continue
-                    
-                # Check if line contains a URL
-                match = url_pattern.search(line)
-                if match:
-                    title = match.group(1)
-                    url = match.group(2)
-                    
-                    # Extract description (everything after the URL and colon)
-                    description_start = line.find(':', match.end())
-                    if description_start != -1:
-                        description = line[description_start + 1:].strip()
-                        url_to_description[url] = description
-        
-        print(f"Parsed {len(url_to_description)} URL descriptions from existing llms.txt file: {file_path}")
-    except Exception as e:
-        print(f"Error parsing existing llms.txt file: {str(e)}")
-        
+        # Check if line contains a URL
+        match = url_pattern.search(line_stripped)
+        if match:
+            title = match.group(1)
+            url = match.group(2)
+            
+            # Extract description (everything after the URL and colon)
+            description_start = line_stripped.find(':', match.end())
+            if description_start != -1:
+                description = line_stripped[description_start + 1:].strip()
+                url_to_description[url] = description
+    
+    print(f"Parsed {len(url_to_description)} URL descriptions from existing llms.txt ({source_desc})")
+    
     return url_to_description, file_structure

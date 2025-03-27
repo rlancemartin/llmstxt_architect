@@ -82,7 +82,20 @@ async def generate_llms_txt(
     # Parse existing llms.txt file if provided
     existing_file_structure = None
     if existing_llms_file and update_descriptions_only:
-        _, existing_file_structure = parse_existing_llms_file(existing_llms_file)
+        if existing_llms_file.startswith(('http://', 'https://')):
+            # For remote file, we need to fetch it first
+            try:
+                from llmstxt_architect.loader import fetch_llms_txt_from_url, parse_existing_llms_file_content
+                content = await fetch_llms_txt_from_url(existing_llms_file)
+                # Parse content directly without saving to file
+                file_lines = content.splitlines(True)  # Keep line endings
+                _, existing_file_structure = parse_existing_llms_file_content(file_lines)
+            except Exception as e:
+                print(status_message(f"Error fetching remote llms.txt file: {str(e)}", "error"))
+                raise
+        else:
+            # For local file
+            _, existing_file_structure = parse_existing_llms_file(existing_llms_file)
     
     # Load all documents
     print(status_message("Loading and processing URLs...", "processing"))
@@ -99,6 +112,9 @@ async def generate_llms_txt(
         blacklist_file=blacklist_file,
         existing_llms_file=existing_llms_file if update_descriptions_only else None,
     )
+    
+    # Run async post-initialization
+    await summarizer.__post_init__()
     
     # Generate summaries
     try:

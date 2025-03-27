@@ -256,7 +256,11 @@ LLMsTxt Architect can update descriptions in existing llms.txt files while prese
 ### Using an Existing File as URL Source
 
 ```bash
+# Use a local file
 llmstxt-architect --existing-llms-file path/to/llms.txt
+
+# Or use a remote file
+llmstxt-architect --existing-llms-file https://example.com/llms.txt
 ```
 
 This extracts URLs from the existing file and generates a completely new llms.txt with freshly generated descriptions. The original file's structure (headers, ordering, etc.) is not preserved.
@@ -264,7 +268,11 @@ This extracts URLs from the existing file and generates a completely new llms.tx
 ### Preserving File Structure While Updating Descriptions
 
 ```bash
+# Use a local file
 llmstxt-architect --existing-llms-file path/to/llms.txt --update-descriptions-only
+
+# Or use a remote file
+llmstxt-architect --existing-llms-file https://example.com/llms.txt --update-descriptions-only
 ```
 
 This mode:
