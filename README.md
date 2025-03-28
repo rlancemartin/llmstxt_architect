@@ -1,45 +1,39 @@
 # LLMsTxt Architect
 
-llms.txt is an emerging standard for communicating website contents to LLMs, often as a markdown file listing URLs within a site and their descriptions. This has potential to support context retrieval, allowing LLMs to reflect on llms.txt files [and then fetch / read pages](https://github.com/langchain-ai/mcpdoc) needed to accomplish tasks. However, this means that llms.txt files must clearly communicate the purpose of each URL so that the LLM knows which pages to fetch.
-
-LLMsTxt Architect is a Python package that designs and builds [LLMs.txt](https://llmstxt.org/) files by extracting and summarizing web content using LLMs. Importantly, it gives the user control over the prompt to summarize pages, [the model provider and model](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) for summarization, the input pages to search, the search depth for recursive URL loader for each input page, and the website extractor (e.g., bs4, Markdownify, etc) for each page.
+`llms.txt` is an emerging standard for communicating website contents to LLMs. It is a markdown file listing URLs within a site and their *descriptions*, giving LLMs a guide [to help fetch and read pages](https://github.com/langchain-ai/mcpdoc) in order to accomplish tasks. LLMsTxt Architect is a Python package that builds [LLMs.txt](https://llmstxt.org/) automatically, using LLMs to automate the process. It can start with a list of URLs or an existing `llms.txt` file, and a user can specify the LLM provider, model, prompt used to generate description along with other options.
 
 ![llms_txt_architecture](https://github.com/user-attachments/assets/54e12c8d-ba6e-4739-aadb-07c1c5f028f0)
 
-## Features
-
-- [Recursively](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) crawl a user defined list of web sites to a user-defined depth
-- Extract content from each page with a user-defined extractor
-- Summarize content using user-defined LLM selected from [many providers](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html)
-- Fault tolerance with checkpoints to resume after interruptions or timeouts
-- Periodic progress updates with intermediate results saved during processing
-- Skip already processed pages to efficiently resume interrupted runs
-- Generate a formatted LLMs.txt file containing all summaries sorted by URL
-- Deduplicate summaries to ensure clean output
-
 ## Quickstart
 
-### API key
-
-By default, the package uses Anthropic's Claude models. You can set the API key for the Anthropic provider with:
-
-```
-export ANTHROPIC_API_KEY=your_api_key_here
-```
-
-However, you can easily switch to other providers  [listed here](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) (see [Configurations](#configurations) below).
-
-### UVX 
-
-Use uvx to fetch and run the package directly with user-defined parameters:
+Test with Anthropic's Claude 3.7 Sonnet (be sure `ANTHROPIC_API_KEY` is set):
 ```shell
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
-$ uvx --from llmstxt-architect llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name claude-3-7-sonnet-latest --llm-provider anthropic --project-dir test
+$ uvx --from llmstxt-architect llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name claude-3-7-sonnet-latest --llm-provider anthropic --project-dir tmp
 ```
 
-### Pip  
+Test with a local model e.g., Llama 3.2 via Ollama (be sure [Ollama is installed](https://ollama.com/download) and the model is pulled):
+```shell
+$ ollama pull llama3.2:latest
+$ uvx --from llmstxt-architect llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name llama3.2:latest --llm-provider ollama --project-dir tmp
+```
 
-#### CLI
+Both will use [RecursiveURLLoader](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) with `max-depth` 1 to only load the provided page. The results will be saved to the `tmp` directory in the current working directory with a resulting `llms.txt` file along with a `summaries` folder of individual page summaries and a `summarized_urls.json` checkpoint file with the URLs that have already been processed. While running you will see:
+
+< Add images >
+
+The resulting `llms.txt` file for this example input page will be the following (because we set `--max-depth 1`). We can get all :
+```shell
+[Concepts](https://langchain-ai.github.io/langgraph/concepts): LLM should read this page when seeking to understand LangGraph framework concepts, exploring agent patterns, or learning about LangGraph Platform deployment options. The page covers key concepts including LangGraph basics, agentic patterns, multi-agent systems, memory, persistence, streaming, and various LangGraph Platform deployment options (Self-Hosted, Cloud SaaS, BYOC).
+```
+
+You can see some of the `llms.txt` files generated with this tool:
+* https://langchain-ai.github.io/langgraph/llms.txt
+* https://python.langchain.com/llms.txt
+
+### Installation   
+
+You can also install the package with pip, and use the CLI: 
 
 ```bash
 $ python3 -m venv .venv
@@ -48,7 +42,7 @@ $ pip install llmstxt-architect
 $ llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name claude-3-7-sonnet-latest --llm-provider anthropic --project-dir test
 ```
 
-#### Python API in Jupyter/IPython notebooks
+Use it in a notebook: 
 
 ```python
 import asyncio
@@ -63,7 +57,7 @@ await generate_llms_txt(
   )
 ```
 
-#### Python API in a script
+Use it in a script: 
 
 ```python
 import asyncio
@@ -88,7 +82,9 @@ The full list of configurations is available in the [CLI help](https://github.co
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `--urls` | List[str] | Required | List of URLs to process |
+| `--urls` | List[str] | (Required if not using `--existing-llms-file`) | List of URLs to process |
+| `--existing-llms-file` | str | (Required if not using `--urls`) | Path to an existing llms.txt file to extract URLs from and update |
+| `--update-descriptions-only` | flag | False | Update only descriptions in existing llms.txt while preserving structure and URL order |
 | `--max-depth` | int | 5 | Maximum recursion depth for URL crawling |
 | `--llm-name` | str | "claude-3-sonnet-20240229" | LLM model name |
 | `--llm-provider` | str | "anthropic" | LLM provider |
@@ -99,48 +95,83 @@ The full list of configurations is available in the [CLI help](https://github.co
 | `--blacklist-file` | str | None | Path to a file containing blacklisted URLs to exclude (one per line) |
 | `--extractor` | str | "default" | HTML content extractor to use (choices: "default" (Markdownify), "bs4" (BeautifulSoup)) |
 
+### URLs
+
+You can pass multiple URLs that you want to use as the basis for the `llms.txt` file. The [RecursiveURLLoader](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) will crawl *each* URL to the maximum depth as specified by `--max-depth` and use an LLM to summarize all of the resulting pages.
+
+```bash
+---urls https://langchain-ai.github.io/langgraph/concepts https://langchain-ai.github.io/langgraph/tutorials
+--max-depth 1
+```
+
+Max depth can be used to increase the search depth: 
+```
+  - max_depth=1: Returns only the initial page itself
+  - max_depth=2: Returns the initial page plus direct links from that page
+  - max_depth=3: Returns the initial page, direct links, and links found on those pages
+  etc.
+```
+
+### Existing llms.txt File
+
+If you have an existing `llms.txt` file (locally or remotely), you can extract the URLs from it and generates a completely new `llms.txt` with freshly generated descriptions. The original file's structure (headers, ordering, etc.) is *not preserved* by default. 
+
+```bash
+# Use a local file
+llmstxt-architect --existing-llms-file path/to/llms.txt
+
+# Or use a remote file
+llmstxt-architect --existing-llms-file https://example.com/llms.txt
+```
+
+### Preserving llms.txt Structure While Updating Descriptions
+
+If you have an `llms.txt` file that you want to preserve the structure of, you can use the `--update-descriptions-only` flag. This will preserve all structural elements (headers, subheaders, newlines) and the exact ordering of URLs while only updating the descriptions. It also maintains the exact ordering of URLs, preserves titles from the original file, and only updates the descriptions for each URL. This is particularly useful when the existing `llms.txt` file has a carefully curated structure that you want to maintain and you want to improve descriptions without changing the organization.
+
+```bash
+# Use a local file
+llmstxt-architect --existing-llms-file path/to/llms.txt --update-descriptions-only
+
+# Or use a remote file
+llmstxt-architect --existing-llms-file https://example.com/llms.txt --update-descriptions-only
+```
+
 ### Model
 
-The package uses LLMs for summarization. By default, it's configured for Anthropic's Claude models:
-
-To use a different [LLM provider](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html):
+The package uses LLMs for generating descriptions for each URL in the `llms.txt` file. By default, it's configured for Anthropic's Claude models, but you can easily select from many different [LLM providers](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html):
 
 #### Hosted LLMs (OpenAI, Anthropic, etc.):
 1. Install the corresponding package (e.g., `pip install langchain-openai`)
 2. Set the appropriate API key (e.g., `export OPENAI_API_KEY=your_api_key_here`)
-3. Specify the provider and model with the `--llm-provider` and `--llm-name` options, e.g.,
-   ```
-   --llm-provider openai --llm-name gpt-4o
-   ```
+3. Specify the provider and model with the `--llm-provider` and `--llm-name` options, e.g., using the [LLM provider names as shown here](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html)
+```
+--llm-provider openai --llm-name gpt-4o
+```
 
 #### Local Models with Ollama:
 1. [Install Ollama](https://ollama.com/download)
 2. Pull your desired model (e.g., `ollama pull llama3.2:latest`)
 3. Install the package: `pip install langchain-ollama`
 4. Specify the provider and model with the `--llm-provider` and `--llm-name` options, e.g.,
-   ```
-   --llm-provider ollama --llm-name llama3.2:latest
-   ```
-   No API key is required for local models!
+```
+--llm-provider ollama --llm-name llama3.2:latest
+```
 
 ### Prompt
 
 By default, it uses this prompt (see [llmstxt_architect/cli.py](https://github.com/langchain-ai/llmstxt-architect/blob/main/llmstxt_architect/cli.py)):
-
-```
+```bash
 "You are creating a summary for a webpage to be used in a llms.txt file "
 "to help LLMs in the future know what is on this page. Produce a concise "
 "summary of the key items on this page and when an LLM should access it."
 ```
 
 You can override this prompt with the `--summary-prompt` option, e.g.,
-```
---summary-prompt "You are creating a summary for a webpage to be used in a llms.txt file "
+```bash
+--summary-prompt "You are creating a summary for a webpage to be used in a llms.txt file ..."
 ```
 
 ### Extractor
-
-The package uses LangChain's [RecursiveURLLoader](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) to crawl the URLs. 
 
 You can specify which built-in extractor to use with the `--extractor` CLI option:
 
@@ -183,19 +214,18 @@ await generate_llms_txt(
   )
 ```
 
-### Resuming Interrupted Runs
+### Project directory, output directory, and output file
 
-The tool provides robust checkpoint functionality to handle interruptions during processing:
-
-#### Checkpoint Files
+LLMsTxt Architect provides checkpoint functionality to handle interruptions during processing. It creates a project directory to store all outputs. While running, it saves each page's summary to the output directory and updates a checkpoint file (summarized_urls.json) to track which pages have been processed. If the process is interrupted, you can simply run the same command again to resume from where it left off.
 
 - **Progress tracker**: `<project_dir>/<output_dir>/summarized_urls.json`
 - **Individual summaries**: `<project_dir>/<output_dir>/<url>.txt`
-- **Combined output**: `<project_dir>/<output_file>`
+- **Combined output llms.txt file**: `<project_dir>/<output_file>`
 
-All paths are configurable with the `--project-dir`, `--output-dir`, and `--output-file` options.
-
-#### Auto-Resume Functionality
+All paths are configurable with: 
+```bash
+--project-dir, --output-dir, --output-file      
+```
 
 If processing is interrupted (timeout, network issues, etc.), simply run the same command again. The tool will:
 
@@ -232,21 +262,6 @@ The blacklist file should contain one URL per line. Empty lines and lines starti
 
 This is useful for excluding deprecated documentation, beta features, or pages with known issues.
  
-## Summary of Features
-
-The tool includes several features to handle large-scale documentation processing:
-
-- **Interruption Handling**: Even if the process is interrupted by timeouts or errors, progress is preserved
-- **Incremental Updates**: The output file is updated periodically during processing (every 5 successful summaries)
-- **URL Deduplication**: Summaries for pages that have already been processed are not regenerated
-- **Content Deduplication**: Duplicate summaries are filtered out from the final output
-- **Organized Output**: Summaries in the final llms.txt file are sorted by URL for better readability
-- **URL Blacklisting**: Support for excluding specific URLs via a blacklist file
-- **Exception Handling**: Errors during summarization of individual pages don't halt the entire process
-- **Progress Tracking**: Clear console output shows which pages have been processed and skipped
-
-These enhancements make the tool suitable for processing large documentation websites with hundreds of pages, even when using rate-limited API-based LLM providers.
-
 ## License
 
 MIT
