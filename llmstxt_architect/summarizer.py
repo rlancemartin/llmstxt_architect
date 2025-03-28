@@ -182,9 +182,9 @@ class Summarizer:
                 {"role": "human", "content": (
                     f"Read and analyze this content: {doc.page_content}\n\n"
                     "Now, provide a summary EXACTLY in this format:\n"
-                    "Line 1: 'LLM should read this page when [2-3 specific scenarios]'\n"
-                    "Line 2: '[Direct summary of main topics]'\n\n"
-                    "FOLLOW THIS FORMAT PRECISELY. No additional text."
+                    "Line 1: 'LLM should read this page when (2-3 specific scenarios)'\n"
+                    "Line 2: '(Direct summary of main topics)'\n\n"
+                    "FOLLOW THIS FORMAT PRECISELY. No additional text. Use parentheses () not square brackets []."
                 )}
             ])
             

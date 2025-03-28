@@ -20,8 +20,8 @@ async def generate_llms_txt(
     llm_provider: str = "anthropic",
     summary_prompt: str = (
         "You will create a summary in EXACTLY this format, with NO deviation:\n"
-        "Line 1: 'LLM should read this page when [2-3 specific scenarios based on page content]'\n"
-        "Line 2: '[Direct summary of main topics with no preamble, under 100 words]'\n\n"
+        "Line 1: 'LLM should read this page when (2-3 specific scenarios based on page content)'\n"
+        "Line 2: '(Direct summary of main topics with no preamble, under 100 words)'\n\n"
         "IMPORTANT: Total length must be under 150 words. No extra explanations or preambles. "
         "Do not start with phrases like 'Here is...' or 'This summary...'"
     ),
