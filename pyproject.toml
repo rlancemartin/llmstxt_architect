@@ -36,8 +36,7 @@ dev = [
 llmstxt-architect = "llmstxt_architect.cli:main"
 
 [project.urls]
-"Homepage" = "https://github.com/user/llmstxt-architect"
-"Bug Tracker" = "https://github.com/user/llmstxt-architect/issues"
+"Homepage" = "https://github.com/rlancemartin/llmstxt_architect"
 
 [tool.black]
 line-length = 88

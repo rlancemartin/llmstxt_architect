@@ -18,13 +18,22 @@ $ ollama pull llama3.2:latest
 $ uvx --from llmstxt-architect llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name llama3.2:latest --llm-provider ollama --project-dir tmp
 ```
 
-Both will use [RecursiveURLLoader](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) to recursively crawl the URLs to a depth of 1 and use an LLM to summarize all of the resulting pages. The results will be saved to the `tmp` directory in the current working directory with a resulting `llms.txt` file along with a `summaries` folder of individual page summaries and a `summarized_urls.json` checkpoint file with the URLs that have already been processed.
+Both will use [RecursiveURLLoader](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) with `max-depth` 1 to only load the provided page. The results will be saved to the `tmp` directory in the current working directory with a resulting `llms.txt` file along with a `summaries` folder of individual page summaries and a `summarized_urls.json` checkpoint file with the URLs that have already been processed. While running you will see:
 
-### Pip  
+< Add images >
 
-You can also install the package with pip.
+The resulting `llms.txt` file for this example input page will be the following (because we set `--max-depth 1`). We can get all :
+```shell
+[Concepts](https://langchain-ai.github.io/langgraph/concepts): LLM should read this page when seeking to understand LangGraph framework concepts, exploring agent patterns, or learning about LangGraph Platform deployment options. The page covers key concepts including LangGraph basics, agentic patterns, multi-agent systems, memory, persistence, streaming, and various LangGraph Platform deployment options (Self-Hosted, Cloud SaaS, BYOC).
+```
 
-#### CLI
+You can see some of the `llms.txt` files generated with this tool:
+* https://langchain-ai.github.io/langgraph/llms.txt
+* https://python.langchain.com/llms.txt
+
+### Installation   
+
+You can also install the package with pip, and use the CLI: 
 
 ```bash
 $ python3 -m venv .venv
@@ -33,7 +42,7 @@ $ pip install llmstxt-architect
 $ llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name claude-3-7-sonnet-latest --llm-provider anthropic --project-dir test
 ```
 
-#### Python API (Jupyter/IPython notebooks, etc.)
+Use it in a notebook: 
 
 ```python
 import asyncio
@@ -48,7 +57,7 @@ await generate_llms_txt(
   )
 ```
 
-#### Python API in a script
+Use it in a script: 
 
 ```python
 import asyncio
@@ -92,7 +101,15 @@ You can pass multiple URLs that you want to use as the basis for the `llms.txt` 
 
 ```bash
 ---urls https://langchain-ai.github.io/langgraph/concepts https://langchain-ai.github.io/langgraph/tutorials
-`--max-depth 1
+--max-depth 1
+```
+
+Max depth can be used to increase the search depth: 
+```
+  - max_depth=1: Returns only the initial page itself
+  - max_depth=2: Returns the initial page plus direct links from that page
+  - max_depth=3: Returns the initial page, direct links, and links found on those pages
+  etc.
 ```
 
 ### Existing llms.txt File
