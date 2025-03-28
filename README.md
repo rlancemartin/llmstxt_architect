@@ -2,27 +2,27 @@
 
 `llms.txt` is an emerging standard for communicating website contents to LLMs. It is a markdown file listing URLs within a site and their *descriptions*, giving LLMs a guide [to help fetch and read pages](https://github.com/langchain-ai/mcpdoc) in order to accomplish tasks. LLMsTxt Architect is a Python package that builds [LLMs.txt](https://llmstxt.org/) automatically, using LLMs to automate the process. It can start with a list of URLs or an existing `llms.txt` file, and a user can specify the LLM provider, model, prompt used to generate description along with other options.
 
-![llms_txt_architecture](https://github.com/user-attachments/assets/54e12c8d-ba6e-4739-aadb-07c1c5f028f0)
+![llms_txt_architecture](https://github.com/user-attachments/assets/485eecde-fdd2-475d-bc07-8d1fd7ed8295)
 
 ## Quickstart
 
-Test with Anthropic's Claude 3.7 Sonnet (be sure `ANTHROPIC_API_KEY` is set):
+You can run this tool with many [LLM providers](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html). For example, Anthropic (be sure `ANTHROPIC_API_KEY` is set):
 ```shell
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
 $ uvx --from llmstxt-architect llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name claude-3-7-sonnet-latest --llm-provider anthropic --project-dir tmp
 ```
 
-Test with a local model e.g., Llama 3.2 via Ollama (be sure [Ollama is installed](https://ollama.com/download) and the model is pulled):
+Local model via Ollama (be sure [Ollama is installed](https://ollama.com/download) and the model is pulled):
 ```shell
 $ ollama pull llama3.2:latest
 $ uvx --from llmstxt-architect llmstxt-architect --urls https://langchain-ai.github.io/langgraph/concepts --max-depth 1 --llm-name llama3.2:latest --llm-provider ollama --project-dir tmp
 ```
 
-Both will use [RecursiveURLLoader](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) with `max-depth` 1 to only load the provided page. The results will be saved to the `tmp` directory in the current working directory with a resulting `llms.txt` file along with a `summaries` folder of individual page summaries and a `summarized_urls.json` checkpoint file with the URLs that have already been processed. While running you will see:
+Both will use [RecursiveURLLoader](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) with `max-depth` 1 to only load the provided page. While running you will see:
 
-< Add images >
+![Screenshot 2025-03-28 at 4 14 07 PM](https://github.com/user-attachments/assets/e74344d0-644b-4cd1-89d4-0d1540f44c8c)
 
-The resulting `llms.txt` file for this example input page will be the following (because we set `--max-depth 1`). We can get all :
+The resulting `llms.txt` file for this example input page:
 ```shell
 [Concepts](https://langchain-ai.github.io/langgraph/concepts): LLM should read this page when seeking to understand LangGraph framework concepts, exploring agent patterns, or learning about LangGraph Platform deployment options. The page covers key concepts including LangGraph basics, agentic patterns, multi-agent systems, memory, persistence, streaming, and various LangGraph Platform deployment options (Self-Hosted, Cloud SaaS, BYOC).
 ```
@@ -33,7 +33,7 @@ You can see some of the `llms.txt` files generated with this tool:
 
 ### Installation   
 
-You can also install the package with pip, and use the CLI: 
+You can also install the package with `pip`, and use the CLI: 
 
 ```bash
 $ python3 -m venv .venv
