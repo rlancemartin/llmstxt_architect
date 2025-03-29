@@ -126,7 +126,7 @@ llmstxt-architect --existing-llms-file https://example.com/llms.txt
 
 As an example: 
 ```shell
-uvx --from llmstxt-architect llmstxt-architect --existing-llms-file https://js.langchain.com/llms.txt --update-descriptions-only --llm-namemclaude-3-7-sonnet-latest --llm-provider anthropic --project-dir langchain_docs_js_updated
+uvx --from llmstxt-architect llmstxt-architect --existing-llms-file https://js.langchain.com/llms.txt --update-descriptions-only --llm-nameclaude-3-7-sonnet-latest --llm-provider anthropic --project-dir langchain_docs_js_updated
 ```
 
 ### Preserving llms.txt Structure While Updating Descriptions
@@ -267,6 +267,27 @@ The blacklist file should contain one URL per line. Empty lines and lines starti
 
 This is useful for excluding deprecated documentation, beta features, or pages with known issues.
  
+## Testing
+
+The package includes tests for various usage scenarios. To run the tests:
+
+```bash
+# Run all tests
+python tests/test_all.py
+
+# Run individual tests
+python tests/test_uvx_claude.py    # Test UVX with Claude
+python tests/test_uvx_ollama.py    # Test UVX with Ollama
+python tests/test_script_claude.py # Test Python script import
+```
+
+The tests verify:
+- UVX package execution with Claude
+- UVX package execution with local Ollama models
+- Python script import functionality
+
+All tests check for the creation of the expected output files (llms.txt, summaries directory, and summarized_urls.json).
+
 ## License
 
 MIT
