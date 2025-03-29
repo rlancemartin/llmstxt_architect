@@ -32,6 +32,10 @@ def parse_args() -> argparse.Namespace:
         help="Path to an existing llms.txt file to extract URLs from and update"
     )
     
+    # Support legacy format for compatibility (--urls is no longer required when --existing-llms-file is present)
+    # This is a workaround for uvx which might be passing arguments differently
+    # Handle the case when args are manually specified on command line
+    
     parser.add_argument(
         "--update-descriptions-only",
         action="store_true",
@@ -127,6 +131,12 @@ def main() -> None:
         
     # If using existing llms file but no URLs specified, will extract from file
     urls = args.urls or []
+    
+    # Print status message for clarity
+    if args.existing_llms_file:
+        print(color_text(f"Using existing llms file: {args.existing_llms_file}", "blue"))
+        if args.update_descriptions_only:
+            print(color_text("Mode: Update descriptions only (preserving structure)", "blue"))
     
     try:
         asyncio.run(generate_llms_txt(

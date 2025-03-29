@@ -124,6 +124,11 @@ llmstxt-architect --existing-llms-file path/to/llms.txt
 llmstxt-architect --existing-llms-file https://example.com/llms.txt
 ```
 
+As an example: 
+```shell
+uvx --from llmstxt-architect llmstxt-architect --existing-llms-file https://js.langchain.com/llms.txt --update-descriptions-only --llm-namemclaude-3-7-sonnet-latest --llm-provider anthropic --project-dir langchain_docs_js_updated
+```
+
 ### Preserving llms.txt Structure While Updating Descriptions
 
 If you have an `llms.txt` file that you want to preserve the structure of, you can use the `--update-descriptions-only` flag. This will preserve all structural elements (headers, subheaders, newlines) and the exact ordering of URLs while only updating the descriptions. It also maintains the exact ordering of URLs, preserves titles from the original file, and only updates the descriptions for each URL. This is particularly useful when the existing `llms.txt` file has a carefully curated structure that you want to maintain and you want to improve descriptions without changing the organization.
