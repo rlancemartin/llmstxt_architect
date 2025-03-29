@@ -299,6 +299,33 @@ python tests/cleanup.py
 
 The test system automatically cleans up after itself, removing test directories both before and after test runs to ensure a clean environment.
 
+## Connecting to Code Tools
+
+Once you have a `llms.txt` file, you can connect to it with a code tool. Aa an example, you can use an MCP server (as shown below and [here](https://github.com/langchain-ai/mcpdoc)) to connect to it.
+
+```
+    "mcpServers": {
+      "langgraph-docs-mcp": {
+        "command": "uvx",
+        "args": [
+          "--from",
+          "mcpdoc",
+          "mcpdoc",
+          "--urls",
+          "LangGraph:<path-to-repo>/llmstxt_generator/<project-dir>/llms.txt",
+          "--transport",
+          "stdio",
+          "--port",
+          "8081",
+          "--host",
+          "localhost",
+          "--allowed-domains",
+          "*"
+        ]
+      },
+    }
+```
+
 ## License
 
 MIT
