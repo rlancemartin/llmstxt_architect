@@ -279,14 +279,25 @@ python tests/test_all.py
 python tests/test_uvx_claude.py    # Test UVX with Claude
 python tests/test_uvx_ollama.py    # Test UVX with Ollama
 python tests/test_script_claude.py # Test Python script import
+python tests/test_api.py           # Test API usage
+python tests/test_cli.py           # Test CLI argument parsing
 ```
 
 The tests verify:
 - UVX package execution with Claude
 - UVX package execution with local Ollama models
 - Python script import functionality
+- API usage
+- CLI argument parsing
 
-All tests check for the creation of the expected output files (llms.txt, summaries directory, and summarized_urls.json).
+All tests check for the creation of the expected output files (llms.txt, summaries directory, and summarized_urls.json) and ensure the proper functionality of the CLI interface.
+
+To clean up all test directories:
+```bash
+python tests/cleanup.py
+```
+
+The test system automatically cleans up after itself, removing test directories both before and after test runs to ensure a clean environment.
 
 ## License
 
