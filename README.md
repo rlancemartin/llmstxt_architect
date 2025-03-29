@@ -20,7 +20,7 @@ $ uvx --from llmstxt-architect llmstxt-architect --urls https://langchain-ai.git
 
 Both will use [RecursiveURLLoader](https://python.langchain.com/docs/integrations/document_loaders/recursive_url/) with `max-depth` 1 to only load the provided page. While running you will see:
 
-![Screenshot 2025-03-28 at 4 14 07 PM](https://github.com/user-attachments/assets/e74344d0-644b-4cd1-89d4-0d1540f44c8c)
+![process_overview](https://github.com/user-attachments/assets/dd5448a6-8924-4f5d-8d2c-b49ce25507e5)
 
 The resulting `llms.txt` file for this example input page:
 ```shell
